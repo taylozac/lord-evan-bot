@@ -7,6 +7,7 @@ CONFIG = YAML.load_file('config.yml')
 
 bot = Discordrb::Commands::CommandBot.new token: CONFIG['token'], prefix: CONFIG['prefix']
 
+# Command for role assignment
 bot.command(:role, channels: [CONFIG['bot_channel']]) do |event, action, *roles|
   if %w[add remove].include? action
     roles.each do |r|
@@ -62,6 +63,7 @@ bot.command(:newclass, required_roles: [CONFIG['roles']['admin']]) do |event, na
   end
 end
 
+# Command to tally and acknowledge praises to the God King Evan
 bot.command :praise do |event|
   praises = File.open('praises').read.to_i
   praises += 1
@@ -85,6 +87,54 @@ end
 # add role on member join
 bot.member_join do |event|
   event.user.add_role(CONFIG['roles']['disciple'])
+end
+
+# Queueing commands, allowing users to join and leave FIFO queues
+queues = {} #Queues example: { queue_a: { size: 3, queue: [ ID, ID, ... ] }, queue_b: { size: 1, queue: [ ID, ID, ... ] } }
+bot.command(:queue, channels: [CONFIG['bot_channel']]) do |event, action, *args| #!queue join <name>,  !queue next <name>, !queue join 
+	# No permission for these
+	case action
+	when "join"
+	when "leave" # Leave given queue(s)
+	when "" #Help embed
+		event.channel.send_embed do |embed|
+			embed.fields = [
+				{ name: 'Usage:', value: '`!queue join queuename`
+				`!role leave queuename queuename2`
+				`!role leave all`' },
+				{ name: 'Valid queues:', value: "`#{queues.keys.join("` `")}`" }
+			]
+			embed.color = CONFIG['colors']['error']
+		end
+	end
+	
+	# Permissions (admin) for these
+	if event.author.roles.any? { |r| r.id == CONFIG['roles']['god'] }
+		case action
+		when "new" # Create new queue by name
+			if args.length == 1 #We need queue name
+				if !queues.key?(args[0])
+					# Create new queue
+					return event.message.react '✅'
+				else
+					return event.message.react '❓'
+				end
+			else
+				return event.message.react '❓'
+			end
+		when "next" # Remove first n entries from the queue # If no number follows "next", assume n = 1
+			if queues.key?(args[0]) # Make sure queue exists
+				n = args.length == 2 : args[1] ? 1
+				queues[args[0]].shift(n)
+				return event.message.react '✅'
+			else
+				return event.message.react '❓'
+			end
+		when "remove" # Delete queue by name
+			
+		end
+	end
+	return event.message.react '❓'
 end
 
 # Start bot
