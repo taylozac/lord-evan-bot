@@ -1,6 +1,7 @@
 ---
 token: TOKEN_HERE
 prefix: '!'
+bot_channel: COMMAND_CHANNEL_ID
 
 roles:
   god: 11111
